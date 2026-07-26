@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
-import { Camera, CheckCircle2, AlertTriangle, Video, Upload, RefreshCw, Edit3, Film, Check, Trash2, PackageCheck, Sparkles } from 'lucide-react';
-
+import { CheckCircle2, Video, Upload, RefreshCw, Edit3, Check, Trash2, PackageCheck, Sparkles } from 'lucide-react';
 const GOOGLE_SCRIPT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzQquNH2KXJhk6AsXx8WKIOKAR-54frJXNR7X0_wbPAP9TCd-URwWwomusEmr1-ZLVcXg/exec"; 
 
 const REASON_OPTIONS = [
