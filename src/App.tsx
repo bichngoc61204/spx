@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import Quagga from '@ericblade/quagga2';
-import jsQR from 'jsqr'; // Thuật toán giải mã QR tốc độ cao
-import { CheckCircle2, Video, Upload, RefreshCw, Edit3, Check, Trash2, PackageCheck, Sparkles, Zap, QrCode, Barcode } from 'lucide-react';
+import jsQR from 'jsqr';
+import { 
+  CheckCircle2, Video, Upload, RefreshCw, Edit3, Check, 
+  Trash2, PackageCheck, Sparkles, Zap, QrCode, Barcode, Sun, Moon 
+} from 'lucide-react';
 import './App.css';
 
 const GOOGLE_SCRIPT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzQquNH2KXJhk6AsXx8WKIOKAR-54frJXNR7X0_wbPAP9TCd-URwWwomusEmr1-ZLVcXg/exec"; 
@@ -19,8 +22,10 @@ const REASON_OPTIONS = [
 
 const DEFAULT_PREFIX = "SPXVN";
 type ScanMode = 'barcode' | 'qrcode';
+type ThemeMode = 'dark' | 'light';
 
 export default function App() {
+  const [theme, setTheme] = useState<ThemeMode>('dark');
   const [trackingCode, setTrackingCode] = useState<string>('');
   const [isManualInput, setIsManualInput] = useState<boolean>(false);
   const [manualCode, setManualCode] = useState<string>(DEFAULT_PREFIX);
@@ -47,7 +52,11 @@ export default function App() {
   const qrStreamRef = useRef<MediaStream | null>(null);
   const animFrameIdRef = useRef<number | null>(null);
 
-  // Âm thanh "Tít" bằng Web Audio API
+  // Toggle Dark/Light Mode
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
   const playBeepSound = () => {
     try {
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
@@ -148,7 +157,7 @@ export default function App() {
     } catch (e) {}
   };
 
-  // 2. ENGINE QUÉT QR CODE TỐC ĐỘ CAO (Dùng jsQR + Canvas + Loop 60fps tương tự pyzbar)
+  // 2. ENGINE QUÉT QR CODE TỐC ĐỘ CAO
   const startJsQrScanner = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -159,7 +168,7 @@ export default function App() {
 
       if (qrVideoRef.current) {
         qrVideoRef.current.srcObject = stream;
-        qrVideoRef.current.setAttribute("playsinline", "true"); // Bắt buộc cho iOS
+        qrVideoRef.current.setAttribute("playsinline", "true");
         await qrVideoRef.current.play();
         animFrameIdRef.current = requestAnimationFrame(scanQrFrame);
       }
@@ -181,9 +190,8 @@ export default function App() {
 
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         
-        // Thuật toán quét QR
         const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: "dontInvert", // Bỏ qua lật màu để tối ưu tốc độ tối đa
+          inversionAttempts: "dontInvert",
         });
 
         if (code && code.data) {
@@ -195,7 +203,6 @@ export default function App() {
         }
       }
     }
-    // Lặp frame liên tục theo chuẩn màn hình (tốc độ ánh sáng)
     animFrameIdRef.current = requestAnimationFrame(scanQrFrame);
   };
 
@@ -319,63 +326,106 @@ export default function App() {
     setIsScanning(true);
   };
 
+  // Biến style dùng chung cho Liquid Glass
+  const isDark = theme === 'dark';
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col max-w-md mx-auto shadow-2xl relative font-sans">
-      
-      {/* HEADER */}
-      <header className="bg-slate-900/80 backdrop-blur-md border-b border-slate-800/80 px-4 py-3.5 sticky top-0 z-50 flex justify-between items-center">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 bg-gradient-to-tr from-orange-600 to-amber-500 rounded-xl shadow-lg shadow-orange-500/20 text-white">
-            <PackageCheck size={18} />
+    <div className={`min-h-screen transition-colors duration-300 font-sans flex flex-col max-w-md mx-auto relative select-none ${
+      isDark ? 'bg-black text-slate-100' : 'bg-slate-100 text-slate-800'
+    }`}>
+
+      {/* HEADER GLASS */}
+      <header className={`sticky top-0 z-50 px-4 py-3 backdrop-blur-xl border-b transition-colors ${
+        isDark 
+          ? 'bg-neutral-900/60 border-white/10' 
+          : 'bg-white/70 border-black/5 shadow-sm'
+      }`}>
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-orange-600 to-amber-500 flex items-center justify-center text-white shadow-md shadow-orange-500/20 active:scale-95 transition">
+              <PackageCheck size={20} />
+            </div>
+            <div>
+              <h1 className="font-bold text-[15px] leading-tight tracking-tight">SPX Express</h1>
+              <p className={`text-[10px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Ghi nhận đơn sự cố</p>
+            </div>
           </div>
-          <div>
-            <h1 className="font-bold text-[15px] tracking-tight text-slate-100">SPX Express</h1>
-            <p className="text-[10px] text-slate-400 font-medium">Hệ thống ghi nhận đơn lỗi</p>
+
+          <div className="flex items-center gap-1.5">
+            {/* Toggle Dark/Light Mode */}
+            <button 
+              onClick={toggleTheme}
+              className={`p-2 rounded-xl backdrop-blur-md border transition active:scale-90 ${
+                isDark 
+                  ? 'bg-white/10 border-white/15 text-amber-400' 
+                  : 'bg-black/5 border-black/10 text-orange-600'
+              }`}
+            >
+              {isDark ? <Sun size={17} /> : <Moon size={17} />}
+            </button>
+
+            {/* Reset Button */}
+            <button 
+              onClick={handleReset} 
+              className={`p-2 rounded-xl backdrop-blur-md border transition active:scale-90 ${
+                isDark 
+                  ? 'bg-white/10 border-white/15 text-slate-300' 
+                  : 'bg-black/5 border-black/10 text-slate-600'
+              }`}
+            >
+              <RefreshCw size={17} />
+            </button>
           </div>
         </div>
-        <button onClick={handleReset} className="p-2 text-slate-400 hover:text-slate-100 bg-slate-800/60 rounded-xl transition active:scale-95">
-          <RefreshCw size={16} />
-        </button>
       </header>
 
       {uploadSuccess ? (
-        <div className="p-6 flex-1 flex flex-col justify-center items-center text-center space-y-5 animate-in fade-in duration-300">
+        <div className="p-6 flex-1 flex flex-col justify-center items-center text-center space-y-6 animate-in fade-in zoom-in-95 duration-300">
           <div className="relative">
-            <div className="absolute -inset-1 rounded-full bg-emerald-500/20 blur-xl"></div>
-            <div className="relative bg-slate-900 border border-emerald-500/30 p-5 rounded-full text-emerald-400">
-              <CheckCircle2 size={50} />
+            <div className="absolute -inset-2 rounded-full bg-emerald-500/20 blur-2xl"></div>
+            <div className={`relative p-5 rounded-full border ${
+              isDark ? 'bg-neutral-900/80 border-emerald-500/40 text-emerald-400' : 'bg-white border-emerald-500/30 text-emerald-600 shadow-xl'
+            }`}>
+              <CheckCircle2 size={56} />
             </div>
           </div>
           
           <div className="space-y-1">
-            <h2 className="text-xl font-bold text-slate-100">Tải Lên Thành Công!</h2>
-            <p className="text-xs text-slate-400">Đơn hàng đã được ghi nhận vào hệ thống</p>
+            <h2 className="text-xl font-bold tracking-tight">Tải Lên Thành Công!</h2>
+            <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Dữ liệu đã được lưu trữ an toàn</p>
           </div>
 
-          <div className="w-full bg-slate-900/90 border border-slate-800 p-4 rounded-2xl space-y-2.5 text-left">
+          <div className={`w-full p-4 rounded-2xl border backdrop-blur-xl space-y-3 text-left ${
+            isDark ? 'bg-neutral-900/50 border-white/10' : 'bg-white/80 border-black/5 shadow-sm'
+          }`}>
             <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-400">Mã vận đơn:</span>
-              <span className="font-mono font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded border border-orange-500/20">{trackingCode}</span>
+              <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Mã vận đơn:</span>
+              <span className="font-mono font-bold text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded-md border border-orange-500/20">{trackingCode}</span>
             </div>
             <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-400">Trạng thái:</span>
-              <span className="text-emerald-400 font-medium flex items-center gap-1"><Sparkles size={12} /> Đã lưu Drive & Sheet</span>
+              <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Trạng thái:</span>
+              <span className="text-emerald-500 font-medium flex items-center gap-1"><Sparkles size={12} /> Đã đồng bộ Google Drive</span>
             </div>
           </div>
 
-          <button onClick={handleReset} className="w-full mt-4 py-3.5 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-semibold rounded-xl shadow-lg active:scale-[0.98] transition">
+          <button 
+            onClick={handleReset} 
+            className="w-full py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold rounded-2xl shadow-lg shadow-orange-500/25 active:scale-[0.98] transition-all text-sm"
+          >
             Quét Đơn Tiếp Theo
           </button>
         </div>
       ) : (
-        <main className="p-3.5 space-y-3.5 flex-1 pb-10">
+        <main className="p-3.5 space-y-3 flex-1 pb-10">
 
-          {/* BƯỚC 1 */}
-          <section className="bg-slate-900/80 backdrop-blur border border-slate-800/80 rounded-2xl p-3.5 shadow-xl space-y-3">
-            <div className="flex justify-between items-center">
+          {/* BƯỚC 1: MÃ VẬN ĐƠN */}
+          <section className={`p-3.5 rounded-2xl border backdrop-blur-xl transition-all shadow-sm ${
+            isDark ? 'bg-neutral-900/40 border-white/10' : 'bg-white/80 border-black/5'
+          }`}>
+            <div className="flex justify-between items-center mb-3">
               <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-md bg-orange-500/10 text-orange-400 border border-orange-500/20 flex items-center justify-center text-[11px] font-bold">1</span>
-                <h2 className="font-semibold text-sm text-slate-200">Mã Vận Đơn</h2>
+                <span className="w-5 h-5 rounded-lg bg-orange-500/15 text-orange-500 font-bold text-[11px] flex items-center justify-center">1</span>
+                <h2 className="font-bold text-xs uppercase tracking-wider opacity-80">Mã Vận Đơn</h2>
               </div>
               <button
                 onClick={() => {
@@ -383,61 +433,70 @@ export default function App() {
                   setIsManualInput(newMode);
                   if (newMode) stopAllScanners(); else setIsScanning(true);
                 }}
-                className="text-xs text-amber-400/90 hover:text-amber-300 font-medium flex items-center gap-1 transition p-1"
+                className="text-xs text-orange-500 font-semibold flex items-center gap-1 active:opacity-75 transition"
               >
-                <Edit3 size={12} /> {isManualInput ? "Dùng Camera Quét" : "Nhập tay"}
+                <Edit3 size={12} /> {isManualInput ? "Dùng Camera" : "Nhập tay"}
               </button>
             </div>
 
             {!isManualInput && !trackingCode && (
-              <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-medium">
+              <div className={`flex p-1 rounded-xl mb-3 border ${
+                isDark ? 'bg-black/40 border-white/5' : 'bg-slate-200/50 border-black/5'
+              }`}>
                 <button
                   onClick={() => setScanMode('barcode')}
-                  className={`flex-1 py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition ${scanMode === 'barcode' ? 'bg-amber-500 text-slate-950 font-bold shadow-md' : 'text-slate-400'}`}
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                    scanMode === 'barcode' 
+                      ? (isDark ? 'bg-orange-500 text-white shadow-md' : 'bg-white text-orange-600 shadow-sm')
+                      : (isDark ? 'text-slate-400' : 'text-slate-600')
+                  }`}
                 >
-                  <Barcode size={15} /> Mã vạch ngang
+                  <Barcode size={14} /> Mã vạch
                 </button>
                 <button
                   onClick={() => setScanMode('qrcode')}
-                  className={`flex-1 py-2.5 rounded-lg flex items-center justify-center gap-1.5 transition ${scanMode === 'qrcode' ? 'bg-amber-500 text-slate-950 font-bold shadow-md' : 'text-slate-400'}`}
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                    scanMode === 'qrcode' 
+                      ? (isDark ? 'bg-orange-500 text-white shadow-md' : 'bg-white text-orange-600 shadow-sm')
+                      : (isDark ? 'text-slate-400' : 'text-slate-600')
+                  }`}
                 >
-                  <QrCode size={15} /> Mã QR Code
+                  <QrCode size={14} /> Mã QR
                 </button>
               </div>
             )}
 
             {!isManualInput && !trackingCode && (
-              <div className="relative rounded-xl overflow-hidden bg-black border border-slate-800 aspect-[4/3] min-h-[260px] w-full">
-                
+              <div className="relative rounded-xl overflow-hidden bg-black border border-white/10 aspect-[4/3] w-full shadow-inner">
                 {/* 1. View Engine Mã Vạch Quagga */}
                 <div ref={quaggaContainerRef} className={`absolute inset-0 [&>video]:w-full [&>video]:h-full [&>video]:object-cover [&>canvas]:hidden ${scanMode === 'barcode' ? 'block' : 'hidden'}`} />
 
-                {/* 2. View Engine QR Code (Trực tiếp bằng jsQR Video + Canvas) */}
+                {/* 2. View Engine QR Code */}
                 <div className={`absolute inset-0 ${scanMode === 'qrcode' ? 'block' : 'hidden'}`}>
                   <video ref={qrVideoRef} className="w-full h-full object-cover" />
                   <canvas ref={qrCanvasRef} className="hidden" />
                 </div>
 
-                {/* Overlays UI */}
+                {/* Overlays UI Camera */}
                 {scanMode === 'barcode' ? (
-                  <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-between py-4 z-10">
-                    <span className="text-[11px] bg-slate-900/95 text-amber-400 font-medium px-3 py-1 rounded-full shadow-lg flex items-center gap-1">
-                      <Zap size={12} className="fill-amber-400" /> Quét mã vạch
+                  <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-between py-3 z-10">
+                    <span className="text-[10px] bg-black/60 backdrop-blur-md text-amber-400 px-3 py-1 rounded-full border border-white/10 flex items-center gap-1 font-medium">
+                      <Zap size={11} className="fill-amber-400" /> Căn dải mã vạch vào khung
                     </span>
-                    <div className="w-[85%] h-20 border-2 border-amber-400 rounded-lg flex items-center justify-center bg-amber-400/10 shadow-[0_0_15px_rgba(251,191,36,0.2)]">
-                      <div className="w-full h-[2px] bg-amber-400 animate-pulse shadow-[0_0_8px_rgba(251,191,36,1)]"></div>
+                    <div className="w-[85%] h-16 border-2 border-orange-500 rounded-lg flex items-center justify-center bg-orange-500/10">
+                      <div className="w-full h-[2px] bg-orange-500 animate-pulse shadow-[0_0_10px_#f97316]"></div>
                     </div>
-                    <span className="text-[10px] text-slate-300 bg-slate-950/80 px-2 py-1 rounded">Căn dải mã vạch vào khung ngang</span>
+                    <span className="text-[10px] text-white/70 bg-black/40 px-2 py-0.5 rounded">Tự động quét</span>
                   </div>
                 ) : (
-                  <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-between py-4 z-10">
-                    <span className="text-[11px] bg-slate-900/95 text-amber-400 font-medium px-3 py-1 rounded-full shadow-lg flex items-center gap-1">
-                      <QrCode size={12} /> Quét QR Siêu Tốc
+                  <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-between py-3 z-10">
+                    <span className="text-[10px] bg-black/60 backdrop-blur-md text-amber-400 px-3 py-1 rounded-full border border-white/10 flex items-center gap-1 font-medium">
+                      <QrCode size={11} /> Căn QR Code vào tâm
                     </span>
-                    <div className="w-48 h-48 border-2 border-dashed border-amber-400 rounded-xl flex items-center justify-center bg-amber-400/5">
-                      <div className="w-full h-full border border-amber-400/30 rounded-xl animate-ping opacity-20"></div>
+                    <div className="w-44 h-44 border-2 border-dashed border-orange-500 rounded-xl flex items-center justify-center bg-orange-500/5">
+                      <div className="w-full h-full border border-orange-500/30 rounded-xl animate-ping opacity-25"></div>
                     </div>
-                    <span className="text-[10px] text-slate-300 bg-slate-950/80 px-2 py-1 rounded">Đưa camera tới gần mã QR</span>
+                    <span className="text-[10px] text-white/70 bg-black/40 px-2 py-0.5 rounded">Tự động quét siêu tốc</span>
                   </div>
                 )}
               </div>
@@ -449,67 +508,124 @@ export default function App() {
                   type="text"
                   value={manualCode}
                   onChange={(e) => setManualCode(e.target.value.toUpperCase())}
-                  className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-slate-100 font-mono text-sm uppercase outline-none focus:border-amber-500"
+                  className={`flex-1 border rounded-xl px-3 py-2.5 font-mono text-sm uppercase outline-none transition ${
+                    isDark 
+                      ? 'bg-black/50 border-white/15 text-white focus:border-orange-500' 
+                      : 'bg-slate-50 border-black/15 text-slate-900 focus:border-orange-500'
+                  }`}
                 />
                 <button
                   onClick={() => manualCode.trim() && setTrackingCode(manualCode.trim())}
-                  className="bg-slate-800 border border-slate-700 text-slate-200 px-4 rounded-xl text-sm font-medium"
+                  className="bg-orange-500 text-white px-4 rounded-xl text-xs font-bold active:scale-95 transition"
                 >Lưu</button>
               </div>
             )}
 
             {trackingCode && (
-              <div className="bg-slate-950/60 border border-emerald-500/30 p-3 rounded-xl flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <div className="p-1 bg-emerald-500/10 text-emerald-400 rounded-md"><Check size={14} /></div>
+              <div className={`p-3 rounded-xl border flex justify-between items-center backdrop-blur-md ${
+                isDark ? 'bg-emerald-950/20 border-emerald-500/30' : 'bg-emerald-50/80 border-emerald-500/20'
+              }`}>
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 bg-emerald-500 text-white rounded-lg"><Check size={14} /></div>
                   <div>
-                    <span className="text-[10px] text-slate-400 block">Mã đã ghi nhận</span>
-                    <span className="text-sm font-mono font-bold text-slate-100">{trackingCode}</span>
+                    <span className={`text-[10px] block ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Mã đã ghi nhận</span>
+                    <span className="text-sm font-mono font-bold tracking-wide text-emerald-500">{trackingCode}</span>
                   </div>
                 </div>
-                <button onClick={() => { setTrackingCode(''); setIsScanning(true); }} className="text-xs bg-slate-800 text-slate-300 px-3 py-1.5 rounded-lg">Quét lại</button>
+                <button 
+                  onClick={() => { setTrackingCode(''); setIsScanning(true); }} 
+                  className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition ${
+                    isDark ? 'bg-white/10 border-white/10 text-slate-300' : 'bg-white border-black/10 text-slate-700 shadow-sm'
+                  }`}
+                >Quét lại</button>
               </div>
             )}
           </section>
 
-          {/* BƯỚC 2 */}
-          <section className="bg-slate-900/80 backdrop-blur border border-slate-800/80 rounded-2xl p-3.5 shadow-xl space-y-3">
-            <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center text-[11px] font-bold">2</span>
-              <h2 className="font-semibold text-sm text-slate-200">Chi Tiết Sự Cố</h2>
+          {/* BƯỚC 2: CHI TIẾT SỰ CỐ */}
+          <section className={`p-3.5 rounded-2xl border backdrop-blur-xl transition-all shadow-sm ${
+            isDark ? 'bg-neutral-900/40 border-white/10' : 'bg-white/80 border-black/5'
+          }`}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-5 h-5 rounded-lg bg-orange-500/15 text-orange-500 font-bold text-[11px] flex items-center justify-center">2</span>
+              <h2 className="font-bold text-xs uppercase tracking-wider opacity-80">Chi Tiết Sự Cố</h2>
             </div>
-            <div className="space-y-2">
-              <select value={reason} onChange={(e) => setReason(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-200 outline-none">
+
+            <div className="space-y-2.5">
+              <select 
+                value={reason} 
+                onChange={(e) => setReason(e.target.value)} 
+                className={`w-full border rounded-xl px-3 py-2.5 text-xs font-medium outline-none transition ${
+                  isDark 
+                    ? 'bg-neutral-950 border-white/15 text-slate-200 focus:border-orange-500' 
+                    : 'bg-slate-50 border-black/10 text-slate-800 focus:border-orange-500'
+                }`}
+              >
                 {REASON_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
               </select>
-              <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ghi chú bổ sung..." className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 outline-none resize-none"></textarea>
+
+              <textarea 
+                rows={2} 
+                value={description} 
+                onChange={(e) => setDescription(e.target.value)} 
+                placeholder="Ghi chú thêm (không bắt buộc)..." 
+                className={`w-full border rounded-xl p-3 text-xs outline-none resize-none transition ${
+                  isDark 
+                    ? 'bg-neutral-950 border-white/15 text-slate-200 focus:border-orange-500' 
+                    : 'bg-slate-50 border-black/10 text-slate-800 focus:border-orange-500'
+                }`}
+              ></textarea>
             </div>
           </section>
 
-          {/* BƯỚC 3 */}
-          <section className="bg-slate-900/80 backdrop-blur border border-slate-800/80 rounded-2xl p-3.5 shadow-xl space-y-3">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-md bg-orange-500/10 text-orange-400 border border-orange-500/20 flex items-center justify-center text-[11px] font-bold">3</span>
-                <h2 className="font-semibold text-sm text-slate-200">Video Minh Chứng</h2>
-              </div>
+          {/* BƯỚC 3: VIDEO MINH CHỨNG */}
+          <section className={`p-3.5 rounded-2xl border backdrop-blur-xl transition-all shadow-sm ${
+            isDark ? 'bg-neutral-900/40 border-white/10' : 'bg-white/80 border-black/5'
+          }`}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-5 h-5 rounded-lg bg-orange-500/15 text-orange-500 font-bold text-[11px] flex items-center justify-center">3</span>
+              <h2 className="font-bold text-xs uppercase tracking-wider opacity-80">Video Minh Chứng</h2>
             </div>
 
             {!videoBlob ? (
-              <div className="space-y-2.5">
-                <video ref={videoPreviewRef} className={`w-full aspect-[4/3] bg-slate-950 rounded-xl object-cover border border-slate-800 ${recording ? 'block' : 'hidden'}`} playsInline autoPlay></video>
+              <div className="space-y-2">
+                <video ref={videoPreviewRef} className={`w-full aspect-[4/3] bg-black rounded-xl object-cover border border-white/10 ${recording ? 'block' : 'hidden'}`} playsInline autoPlay></video>
+                
                 {!recording ? (
-                  <button onClick={startRecording} className="w-full py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-xl font-medium flex items-center justify-center gap-2 text-xs transition"><Video size={16} className="text-orange-400" /> Bắt Đầu Quay Video</button>
+                  <button 
+                    onClick={startRecording} 
+                    className={`w-full py-3 rounded-xl border font-semibold flex items-center justify-center gap-2 text-xs transition active:scale-[0.98] ${
+                      isDark 
+                        ? 'bg-white/5 border-white/10 text-slate-200 hover:bg-white/10' 
+                        : 'bg-slate-100 border-black/10 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    <Video size={15} className="text-orange-500" /> Bắt Đầu Quay Video
+                  </button>
                 ) : (
-                  <button onClick={stopRecording} className="w-full py-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 font-medium rounded-xl flex items-center justify-center gap-2 text-xs animate-pulse"><div className="w-2.5 h-2.5 bg-rose-500 rounded-full"></div> Dừng Quay & Lưu</button>
+                  <button 
+                    onClick={stopRecording} 
+                    className="w-full py-3 bg-rose-500 text-white font-semibold rounded-xl flex items-center justify-center gap-2 text-xs shadow-lg shadow-rose-500/25 animate-pulse active:scale-[0.98]"
+                  >
+                    <div className="w-2.5 h-2.5 bg-white rounded-full"></div> Dừng Quay & Lưu Video
+                  </button>
                 )}
               </div>
             ) : (
-              <div className="bg-slate-950/60 border border-emerald-500/30 p-3 rounded-xl flex items-center justify-between">
-                <div className="flex items-center gap-2 text-emerald-400 text-xs font-semibold">
-                  <Check size={14} className="p-0.5 bg-emerald-500/20 rounded-full" /> Đã quay video
+              <div className={`p-3 rounded-xl border flex items-center justify-between backdrop-blur-md ${
+                isDark ? 'bg-emerald-950/20 border-emerald-500/30' : 'bg-emerald-50/80 border-emerald-500/20'
+              }`}>
+                <div className="flex items-center gap-2 text-emerald-500 text-xs font-semibold">
+                  <Check size={14} className="p-0.5 bg-emerald-500 text-white rounded-full" /> Đã lưu video minh chứng
                 </div>
-                <button onClick={() => setVideoBlob(null)} className="text-xs text-slate-400 hover:text-rose-400 flex items-center gap-1 p-1"><Trash2 size={12} /> Quay lại</button>
+                <button 
+                  onClick={() => setVideoBlob(null)} 
+                  className={`text-xs flex items-center gap-1 p-1 rounded transition ${
+                    isDark ? 'text-slate-400 hover:text-rose-400' : 'text-slate-500 hover:text-rose-600'
+                  }`}
+                >
+                  <Trash2 size={12} /> Quay lại
+                </button>
               </div>
             )}
           </section>
@@ -518,9 +634,17 @@ export default function App() {
           <button
             disabled={isUploading || !trackingCode || !videoBlob}
             onClick={handleSubmit}
-            className={`w-full py-3.5 rounded-xl font-semibold flex items-center justify-center gap-2 text-sm shadow-xl transition-all ${isUploading || !trackingCode || !videoBlob ? 'bg-slate-800/50 text-slate-500' : 'bg-gradient-to-r from-orange-500 to-amber-600 text-white active:scale-[0.98]'}`}
+            className={`w-full py-3.5 rounded-2xl font-bold flex items-center justify-center gap-2 text-sm shadow-xl transition-all ${
+              isUploading || !trackingCode || !videoBlob 
+                ? (isDark ? 'bg-neutral-800 text-neutral-500 border border-white/5' : 'bg-slate-200 text-slate-400 border border-black/5') 
+                : 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-orange-500/25 active:scale-[0.98]'
+            }`}
           >
-            {isUploading ? <><RefreshCw size={16} className="animate-spin" /> Đang tải...</> : <><Upload size={16} /> Gửi Báo Cáo</>}
+            {isUploading ? (
+              <><RefreshCw size={16} className="animate-spin" /> Đang gửi báo cáo...</>
+            ) : (
+              <><Upload size={16} /> Gửi Báo Cáo Sự Cố</>
+            )}
           </button>
         </main>
       )}

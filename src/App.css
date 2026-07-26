@@ -1,17 +1,13 @@
-/* Tối ưu & fix lỗi lệch khung cho Html5Qrcode */
-#qr-reader { 
-  border: none !important; 
-  width: 100% !important; 
-  height: 100% !important; 
+@import "tailwindcss";
+
+body {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
-#qr-reader video { 
-  object-fit: cover !important; 
-  width: 100% !important; 
-  height: 100% !important; 
-}
-
-/* Tắt lớp phủ đen & khung viền mặc định bị lệch của thư viện */
-#qr-shaded-region { 
-  display: none !important; 
+/* Fix viewport camera cho Quagga */
+#interactive.viewport video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
 }
