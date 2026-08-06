@@ -605,36 +605,42 @@ const getOrCreateDailySpreadsheet = async (folderId: string, dateStr: string, to
 
         const dailySpreadsheetId = await getOrCreateDailySpreadsheet(GOOGLE_SHEET_FOLDER_ID, dateStr, accessToken);
 
-        const currentQueueIndex = uploadQueue.findIndex(i => i.id === next.id);
-        const targetRow = currentQueueIndex >= 0 ? currentQueueIndex + 2 : uploadQueue.length + 2;
-
         const timeStr = now.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
-        
-        const formulaApprovedDate = `=IF(EXACT(B${targetRow}; "Done"); TEXT(NOW(); "yyyy-mm-dd hh:mm:ss"); "")`;
 
-        const rowValues = [
-          timeStr,
-          "Pending",
-          next.trackingCode,
-          driveFileUrl,
-          next.reason,
-          next.description || "",
-          userEmail,
-          formulaApprovedDate
-        ];
+// Ghi 7 cột A-G trước, KHÔNG tự đoán dòng — để Sheets tự chọn dòng trống kế tiếp
+const rowValues = [
+  timeStr, "Pending", next.trackingCode, driveFileUrl,
+  next.reason, next.description || "", userEmail
+];
 
-        const sheetRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${dailySpreadsheetId}/values/Sheet1!A:H:append?valueInputOption=USER_ENTERED`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ values: [rowValues] })
-        });
+const sheetRes = await fetch(
+  `https://sheets.googleapis.com/v4/spreadsheets/${dailySpreadsheetId}/values/Sheet1!A:G:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+  {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ values: [rowValues] })
+  }
+);
 
-        handleApiErrorResponse(sheetRes.status);
+handleApiErrorResponse(sheetRes.status);
+if (!sheetRes.ok) throw new Error("Lỗi ghi dữ liệu vào Google Sheet!");
 
-        if (!sheetRes.ok) throw new Error("Lỗi ghi dữ liệu vào Google Sheet!");
+const sheetData = await sheetRes.json();
+// Lấy đúng dòng THẬT Google vừa ghi (vd "Sheet1!A5:G5" -> 5), thay vì đoán từ queue local
+const rowMatch = sheetData?.updates?.updatedRange?.match(/![A-Z]+(\d+)/);
+const realRow = rowMatch ? parseInt(rowMatch[1], 10) : null;
+
+if (realRow) {
+  const formulaApprovedDate = `=IF(EXACT(B${realRow}; "Done"); TEXT(NOW(); "yyyy-mm-dd hh:mm:ss"); "")`;
+  await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${dailySpreadsheetId}/values/Sheet1!H${realRow}?valueInputOption=USER_ENTERED`,
+    {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ values: [[formulaApprovedDate]] })
+    }
+  );
+}
 
         setUploadQueue(prev => prev.map(i => i.id === next.id ? { ...i, status: 'success', videoBlob: undefined } : i));
       } catch (err: any) {
